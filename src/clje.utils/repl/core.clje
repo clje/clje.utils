@@ -1,0 +1,76 @@
+(ns clje.utils.repl.core
+  "This namespace defines functions for use in the REPL similiar to those
+  listed by Erlang's `help()` and LFE's `(help)`.
+  
+  To see all the currently provided functions, type the following at the
+  Clojerl REPL:
+  
+    ```
+    (clje.utils.repl.core/help)
+    ```"
+  (:require 
+   [clojure.core]
+   [clojure.string :as string]
+   [erlang.core]))
+
+(def fields ["Name" "Pid" "Initial Call" "Reds" "Msgs"])
+(def header-format "~-24s ~-12s ~-20s ~-12s ~-12s")
+(def header-bar (apply str (repeat 80 "-")))
+(def row-format "~-18s | ~-10s | ~-18s | ~-10s | ~-10s")
+
+(defn pid
+  ([x y z]
+   (erlang/list_to_pid 
+     (lists/flatten 
+       (io_lib/format "<~p.~p.~p>" #erl(x y z)))))
+  ([name]
+   (erlang/whereis name)))
+
+(defn p-info
+  ([x y z]
+   (vec (erlang/process_info (pid x y z))))
+  ([name]
+   (vec (erlang/process_info (pid name)))))
+
+(defn plist-get
+  [data key]
+  (proplists/get_value key (into #erl() data)))
+
+(defn format-caller
+  [caller]
+  (lists/flatten
+    (io_lib/format 
+      "~p:~p/~p" 
+      (erlang/tuple_to_list caller))))
+
+(defn process-row
+  [registered-atom]
+  (let* [p (erlang/whereis registered-atom)
+         p-info (vec (erlang/process_info p))]
+    [(name registered-atom)
+     (last (string/replace (str p) "#" ""))
+     (str 
+       (format-caller 
+         (plist-get p-info :initial_call)))
+     (str (plist-get p-info :reductions))
+     (str (plist-get p-info :message_queue_len))]))
+
+(defn print-header
+  [fields]
+  (println 
+    (apply (partial format header-format) fields))
+  (println header-bar)
+  :ok)
+
+(defn print-row
+  [data]
+  (println 
+    (apply (partial format row-format) data))
+  :ok)
+
+(defn regs
+  []
+  (print-header fields)
+  (dorun
+    (map #(print-row (process-row %)) (sort (erlang/registered))))
+  :ok)
