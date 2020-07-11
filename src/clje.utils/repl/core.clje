@@ -74,3 +74,21 @@
   (dorun
     (map #(print-row (process-row %)) (sort (erlang/registered))))
   :ok)
+
+(defn usage
+  "Clojerl REPL utility functions
+  
+  (help)        - show this usage information
+  (pid keyword) - Get the process id for a registered function
+  (pid x y z)   - Create a process reference with the given integer triplet
+  (regs)        - Display a table of information for all registered processes
+                  on this node
+  "
+  [])
+
+(defn help
+  "See docstring for `usage`."
+  []
+  (println)
+  (println (:doc (meta #'clje.utils.repl.core/usage)))
+  :ok)
